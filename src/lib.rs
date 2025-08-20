@@ -28,18 +28,6 @@ pub fn do_clean_all(dir: &Path,cmd_list: &mut Vec<cmd::Cmd>) -> u32 {
         //定义变量flag 记录是否存在符合条件的文件
         let mut flag = false;
         
-        // Check for node_modules directory
-        let node_modules_path = dir.join("node_modules");
-        if node_modules_path.exists() && node_modules_path.is_dir() {
-            count += 1;
-            flag = true;
-            println!("{}remove:{} node_modules{} {}", COLOR_GRAY, COLOR_RESET, COLOR_RED, dir.display());
-            if let Err(e) = fs::remove_dir_all(&node_modules_path) {
-                eprintln!("{dir:?} > {e:?}");
-                exit(1)
-            }
-        }
-        
         cmd_list.iter_mut().for_each(|cmd| {
             cmd.related_files.clone().iter().for_each(|file| {
                 if dir.join(file).exists() {
@@ -50,9 +38,17 @@ pub fn do_clean_all(dir: &Path,cmd_list: &mut Vec<cmd::Cmd>) -> u32 {
                     // 检查是否为需要特殊处理的命令
                     if cmd.is_special_clean_command() {
                         // 执行特殊清理逻辑
-                        if let Err(e) = cmd.run_special_clean(dir) {
-                            eprintln!("{dir:?} > {e:?}");
-                            exit(1)
+                        match cmd.run_special_clean(dir) {
+                            Ok(cleaned_count) => {
+                                count += cleaned_count;
+                                if cleaned_count > 0 {
+                                    flag = true;
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("{dir:?} > {e:?}");
+                                exit(1)
+                            }
                         }
                     } else {
                         // 执行标准的 clean 命令

@@ -2,6 +2,7 @@ use std::path::Path;
 use std::process::Command;
 use std::fs;
 use std::io;
+use crate::{COLOR_GRAY, COLOR_RESET, COLOR_RED};
 
 pub struct Cmd<'a> {
     pub name: &'a str,
@@ -34,33 +35,29 @@ impl<'a> Cmd<'a> {
     }
     
     // 执行特殊清理逻辑
-    pub fn run_special_clean(&self, dir: &Path) -> io::Result<()> {
+    pub fn run_special_clean(&self, dir: &Path) -> io::Result<u32> {
         match self.name {
             "nodejs" => self.clean_nodejs_project(dir),
-            _ => Ok(())
+            _ => Ok(0)
         }
     }
     
     // 清理 Node.js 项目
-    fn clean_nodejs_project(&self, dir: &Path) -> io::Result<()> {
+    fn clean_nodejs_project(&self, dir: &Path) -> io::Result<u32> {
         let mut cleaned_count = 0;
         
         // 删除 node_modules 文件夹
         let node_modules = dir.join("node_modules");
-        if node_modules.exists() {
+        if node_modules.exists() && node_modules.is_dir() {
+            cleaned_count += 1;
+            println!("{}remove:{} node_modules{} {}", COLOR_GRAY, COLOR_RESET, COLOR_RED, dir.display());
             if let Err(e) = fs::remove_dir_all(&node_modules) {
-                eprintln!("Failed to remove {}: {}", node_modules.display(), e);
-            } else {
-                cleaned_count += 1;
-                println!("Removed node_modules/");
+                eprintln!("{dir:?} > {e:?}");
+                return Err(e);
             }
         }
         
-        if cleaned_count > 0 {
-            println!("Cleaned {} Node.js artifacts", cleaned_count);
-        }
-        
-        Ok(())
+        Ok(cleaned_count)
     }
     
 }
