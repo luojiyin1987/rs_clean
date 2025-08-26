@@ -1,6 +1,6 @@
 [package]
 name = "rs_clean"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2021"
 
 description = "Rust project that provides a command-line tool designed for cleaning up build artifacts within projects. "
@@ -20,16 +20,16 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
-colored = "2.1.0"
+colored = "3.0.0"
 walkdir = "2.5.0"
-which = "4.4.0"
+which = "8.0.0"
 tokio = { version = "1", features = ["full", "fs", "sync"] }
 futures = "0.3"
-indicatif = "0.17.8"
-thiserror = "1"
+indicatif = "0.18.0"
+thiserror = "2.0.16"
 glob = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8"
+toml = "0.9.5"
 tempfile = "3.8"
-dirs = "5.0"
+dirs = "6.0.0"
