@@ -94,6 +94,12 @@ impl Cmd {
                     }
                 }
                 command.arg("clean");
+                match self.command_type {
+                    CommandType::Maven | CommandType::MavenCmd | CommandType::Gradle => {
+                        command.arg("--offline");
+                    }
+                    _ => {}
+                }
                 command.current_dir(dir);
 
                 command.output().await.map(|_| ()).map_err(|source| CleanError::CommandExecutionFailed {
