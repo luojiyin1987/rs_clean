@@ -1,9 +1,9 @@
-use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
-use clap::Parser;
-use crate::utils::{validate_and_sanitize_path, validate_exclude_dir_name};
 use crate::constant::{DEFAULT_MAX_DIRECTORY_DEPTH, DEFAULT_MAX_FILES_PER_PROJECT};
+use crate::utils::{validate_and_sanitize_path, validate_exclude_dir_name};
+use clap::Parser;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use thiserror::Error;
 
 /// Configuration for the clean command
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Parser)]
@@ -96,7 +96,11 @@ mod tests {
     #[test]
     fn test_load_from_file() {
         let mut file = NamedTempFile::new().unwrap();
-        writeln!(file, "path = \"./test_project\"\nexclude_dir = [\"target\", \"node_modules\"]").unwrap();
+        writeln!(
+            file,
+            "path = \"./test_project\"\nexclude_dir = [\"target\", \"node_modules\"]"
+        )
+        .unwrap();
         let config = Config::load_from_file(file.path()).unwrap();
         assert_eq!(config.path, PathBuf::from("./test_project"));
         assert_eq!(config.exclude_dir, vec!["target", "node_modules"]);

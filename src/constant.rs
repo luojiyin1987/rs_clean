@@ -1,10 +1,9 @@
+use crate::cmd::CommandType;
 use std::collections::HashMap;
-use std::sync::OnceLock;
-use crate::cmd::CommandType; // 引入 CommandType
+use std::sync::OnceLock; // 引入 CommandType
 
 pub const DEFAULT_MAX_DIRECTORY_DEPTH: usize = 5;
 pub const DEFAULT_MAX_FILES_PER_PROJECT: usize = 10000;
-
 
 static CMD_MAP: OnceLock<HashMap<CommandType, Vec<&'static str>>> = OnceLock::new();
 
@@ -13,10 +12,16 @@ pub fn get_cmd_map() -> &'static HashMap<CommandType, Vec<&'static str>> {
         let mut m = HashMap::new();
         m.insert(CommandType::Cargo, vec!["Cargo.toml"]);
         m.insert(CommandType::Go, vec!["go.mod"]);
-        m.insert(CommandType::Gradle, vec!["build.gradle", "build.gradle.kts"]);
+        m.insert(
+            CommandType::Gradle,
+            vec!["build.gradle", "build.gradle.kts"],
+        );
         m.insert(CommandType::NodeJs, vec!["package.json"]); // 统一使用 nodejs 标识符
         m.insert(CommandType::Flutter, vec!["pubspec.yaml"]);
-        m.insert(CommandType::Python, vec!["requirements.txt", "pyproject.toml"]); // Python projects
+        m.insert(
+            CommandType::Python,
+            vec!["requirements.txt", "pyproject.toml"],
+        ); // Python projects
         #[cfg(not(target_os = "windows"))]
         {
             m.insert(CommandType::Maven, vec!["pom.xml"]);

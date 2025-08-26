@@ -4,10 +4,10 @@ use rs_clean::cmd::Cmd;
 use rs_clean::config::Config;
 use rs_clean::constant::get_cmd_map;
 use rs_clean::do_clean_selected_projects;
+use rs_clean::get_cpu_core_count;
 use rs_clean::scan_deletion_preview;
 use rs_clean::show_deletion_preview_and_select;
 use rs_clean::utils::command_exists;
-use rs_clean::get_cpu_core_count;
 use std::time::Instant;
 
 /// A fast and simple tool to clean build artifacts from various projects.
@@ -48,17 +48,22 @@ async fn main() {
     let map = get_cmd_map();
     let mut cmd_list = vec![];
     for (cmd_type, value) in map {
-        if command_exists(cmd_type.as_str()) && !config.exclude_dir.contains(&cmd_type.as_str().to_string()) {
+        if command_exists(cmd_type.as_str())
+            && !config.exclude_dir.contains(&cmd_type.as_str().to_string())
+        {
             cmd_list.push(Cmd::new(*cmd_type, value.clone()));
         }
     }
 
-    let init_cmd: Vec<String> = cmd_list.iter().map(|cmd| cmd.command_type.as_str().to_string()).collect();
+    let init_cmd: Vec<String> = cmd_list
+        .iter()
+        .map(|cmd| cmd.command_type.as_str().to_string())
+        .collect();
     println!(
         "Found supported clean commands: {}",
         init_cmd.join(", ").blue()
     );
-    
+
     // show the concurrent limits and safety information
     let cpu_cores = get_cpu_core_count();
     println!(
@@ -69,22 +74,25 @@ async fn main() {
     );
     println!(
         "Safety limits: max depth {}, max files {}",
-        config.max_directory_depth,
-        config.max_files_per_project
+        config.max_directory_depth, config.max_files_per_project
     );
 
     // interactive selection process (default behavior)
     println!("{}", "Scanning for projects to clean...".blue());
-    
+
     let selected_projects = match scan_deletion_preview(
         &config.path,
         &cmd_list,
         &config.exclude_dir,
         config.max_directory_depth,
         config.max_files_per_project,
-    ).await {
+    )
+    .await
+    {
         Ok(projects) => {
-            match show_deletion_preview_and_select(&projects, config.dry_run, config.no_confirm).await {
+            match show_deletion_preview_and_select(&projects, config.dry_run, config.no_confirm)
+                .await
+            {
                 Ok(selected) => selected,
                 Err(e) => {
                     eprintln!("{} Error during selection: {}", "Error:".red(), e);

@@ -3,10 +3,9 @@ pub mod config;
 pub mod constant;
 pub mod utils;
 
-
 use crate::cmd::Cmd;
 use colored::*;
-use dialoguer::{Select, MultiSelect};
+use dialoguer::{MultiSelect, Select};
 use futures::future;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::io::IsTerminal;
@@ -95,9 +94,14 @@ pub async fn scan_deletion_preview(
                 .iter()
                 .any(|file| path.join(file).exists())
             {
-                let size = get_dir_size_async(path, max_directory_depth, max_files_per_project).await;
+                let size =
+                    get_dir_size_async(path, max_directory_depth, max_files_per_project).await;
                 if size > 0 {
-                    projects_to_clean.push((path.to_path_buf(), cmd.command_type.as_str().to_string(), size));
+                    projects_to_clean.push((
+                        path.to_path_buf(),
+                        cmd.command_type.as_str().to_string(),
+                        size,
+                    ));
                 }
                 break;
             }
@@ -119,28 +123,38 @@ pub async fn show_deletion_preview_and_select(
     }
 
     let total_size: u64 = projects.iter().map(|(_, _, size)| size).sum();
-    
+
     println!("\n{}", "=== Deletion Preview ===".bold().cyan());
     println!("{}", "Found projects to clean:".yellow());
-    
+
     for (i, (path, cmd_type, size)) in projects.iter().enumerate() {
-        println!("  {}. {} ({}) - {}", 
+        println!(
+            "  {}. {} ({}) - {}",
             i + 1,
             path.display().to_string().green(),
             cmd_type.purple(),
             format_size(*size).yellow()
         );
     }
-    
-    println!("\n{}", format!("Total space to be freed: {}", format_size(total_size).bold().red()));
-    
+
+    println!(
+        "\n{}",
+        format!(
+            "Total space to be freed: {}",
+            format_size(total_size).bold().red()
+        )
+    );
+
     if dry_run {
         println!("{}", "Dry run mode - no files will be deleted".yellow());
         return Ok(vec![]);
     }
 
     if no_confirm {
-        println!("{}", "Skipping confirmation prompt - cleaning all projects".yellow());
+        println!(
+            "{}",
+            "Skipping confirmation prompt - cleaning all projects".yellow()
+        );
         return Ok(projects.clone());
     }
 
@@ -156,13 +170,14 @@ pub async fn show_deletion_preview_and_select(
             "Clean all projects",
             "Select specific projects to clean",
             "Review each project individually",
-            "Cancel operation"
+            "Cancel operation",
         ])
         .default(0)
         .interact()?;
 
     match selection_mode {
-        0 => { // Clean all
+        0 => {
+            // Clean all
             let confirm = Select::new()
                 .with_prompt("Clean all selected projects?")
                 .items(&["Yes, clean all projects", "No, cancel operation"])
@@ -174,37 +189,47 @@ pub async fn show_deletion_preview_and_select(
                 Ok(vec![])
             }
         }
-        1 => { // Select specific projects
-            let project_items: Vec<String> = projects.iter()
-                .map(|(path, cmd_type, size)| 
-                    format!("{} ({}) - {}", 
+        1 => {
+            // Select specific projects
+            let project_items: Vec<String> = projects
+                .iter()
+                .map(|(path, cmd_type, size)| {
+                    format!(
+                        "{} ({}) - {}",
                         path.display().to_string(),
                         cmd_type,
                         format_size(*size)
                     )
-                )
+                })
                 .collect();
-            
+
             let selected_indices = MultiSelect::new()
                 .with_prompt("Select projects to clean (space to select, enter to confirm):")
                 .items(&project_items)
                 .interact()?;
-            
+
             let selected_projects: Vec<(PathBuf, String, u64)> = selected_indices
                 .into_iter()
                 .map(|i| projects[i].clone())
                 .collect();
-            
+
             if !selected_projects.is_empty() {
-                let selected_size: u64 = selected_projects.iter().map(|(_, _, size)| size).copied().sum::<u64>();
-                println!("\nSelected projects will free: {}", format_size(selected_size).bold().red());
-                
+                let selected_size: u64 = selected_projects
+                    .iter()
+                    .map(|(_, _, size)| size)
+                    .copied()
+                    .sum::<u64>();
+                println!(
+                    "\nSelected projects will free: {}",
+                    format_size(selected_size).bold().red()
+                );
+
                 let confirm = Select::new()
                     .with_prompt("Clean selected projects?")
                     .items(&["Yes, clean selected projects", "No, cancel operation"])
                     .default(1)
                     .interact()?;
-                
+
                 if confirm == 0 {
                     Ok(selected_projects)
                 } else {
@@ -215,43 +240,51 @@ pub async fn show_deletion_preview_and_select(
                 Ok(vec![])
             }
         }
-        2 => { // Review individually
+        2 => {
+            // Review individually
             let mut selected_projects = Vec::new();
-            
+
             for (path, cmd_type, size) in projects.iter() {
                 println!("\n{}", "Project Review:".bold().cyan());
                 println!("  Path: {}", path.display().to_string().green());
                 println!("  Type: {}", cmd_type.purple());
                 println!("  Size: {}", format_size(*size).yellow());
-                
+
                 let choice = Select::new()
                     .with_prompt("Action for this project:")
                     .items(&[
                         "Clean this project",
                         "Skip this project",
-                        "Cancel entire operation"
+                        "Cancel entire operation",
                     ])
                     .default(0)
                     .interact()?;
-                
+
                 match choice {
                     0 => selected_projects.push((path.clone(), cmd_type.clone(), *size)),
                     1 => continue,
                     2 => return Ok(vec![]),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
-            
+
             if !selected_projects.is_empty() {
-                let selected_size: u64 = selected_projects.iter().map(|(_, _, size)| size).copied().sum::<u64>();
-                println!("\nFinal selection will free: {}", format_size(selected_size).bold().red());
-                
+                let selected_size: u64 = selected_projects
+                    .iter()
+                    .map(|(_, _, size)| size)
+                    .copied()
+                    .sum::<u64>();
+                println!(
+                    "\nFinal selection will free: {}",
+                    format_size(selected_size).bold().red()
+                );
+
                 let confirm = Select::new()
                     .with_prompt("Proceed with cleaning selected projects?")
                     .items(&["Yes, proceed with cleaning", "No, cancel operation"])
                     .default(1)
                     .interact()?;
-                
+
                 if confirm == 0 {
                     Ok(selected_projects)
                 } else {
@@ -261,7 +294,8 @@ pub async fn show_deletion_preview_and_select(
                 Ok(vec![])
             }
         }
-        _ => { // Cancel
+        _ => {
+            // Cancel
             println!("{}", "Operation cancelled by user".yellow());
             Ok(vec![])
         }
@@ -281,9 +315,7 @@ pub async fn do_clean_selected_projects(
 
     let cleaning_tasks: Vec<_> = selected_projects
         .into_iter()
-        .map(|(path, cmd_name, size_before)| {
-            (path, cmd_name, size_before)
-        })
+        .map(|(path, cmd_name, size_before)| (path, cmd_name, size_before))
         .collect();
 
     if cleaning_tasks.is_empty() {
@@ -293,7 +325,7 @@ pub async fn do_clean_selected_projects(
 
     let total_tasks = cleaning_tasks.len();
     let total_size_before: u64 = cleaning_tasks.iter().map(|(_, _, size)| size).sum();
-    
+
     let pb = Arc::new(ProgressBar::new(total_tasks as u64));
     pb.set_style(
         ProgressStyle::default_bar()
@@ -322,10 +354,15 @@ pub async fn do_clean_selected_projects(
                 pb.inc(1);
                 pb.set_message(format!("Cleaning {} ({})", path.display(), cmd_name));
 
-                let cmd = commands.iter().find(|c| c.command_type.as_str() == cmd_name).unwrap();
+                let cmd = commands
+                    .iter()
+                    .find(|c| c.command_type.as_str() == cmd_name)
+                    .unwrap();
                 match cmd.run_clean(&path).await {
                     Ok(_) => {
-                        let size_after = get_dir_size_async(&path, max_directory_depth, max_files_per_project).await;
+                        let size_after =
+                            get_dir_size_async(&path, max_directory_depth, max_files_per_project)
+                                .await;
                         let cleaned_size = size_before.saturating_sub(size_after);
 
                         if cleaned_size > 0 {

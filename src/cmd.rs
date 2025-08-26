@@ -1,8 +1,8 @@
 use std::io;
 use std::path::Path;
+use thiserror::Error;
 use tokio::fs;
 use tokio::process::Command;
-use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum CleanError {
@@ -102,10 +102,12 @@ impl Cmd {
                 }
                 command.current_dir(dir);
 
-                command.output().await.map(|_| ()).map_err(|source| CleanError::CommandExecutionFailed {
-                    command: format!("{} clean", cmd_name),
-                    path: dir.display().to_string(),
-                    source,
+                command.output().await.map(|_| ()).map_err(|source| {
+                    CleanError::CommandExecutionFailed {
+                        command: format!("{} clean", cmd_name),
+                        path: dir.display().to_string(),
+                        source,
+                    }
                 })
             }
         }
@@ -116,10 +118,10 @@ impl Cmd {
             "node_modules",
             "dist",
             "build",
-            ".next", // Next.js build output
-            "out",   // Common build output or Parcel
+            ".next",    // Next.js build output
+            "out",      // Common build output or Parcel
             "coverage", // Test coverage reports
-            ".cache", // General cache directory
+            ".cache",   // General cache directory
         ];
 
         for sub_dir_name in common_node_dirs {
@@ -131,9 +133,11 @@ impl Cmd {
 
     async fn remove_dir_if_exists(&self, path: &Path) -> Result<(), CleanError> {
         if path.exists() {
-            fs::remove_dir_all(path).await.map_err(|source| CleanError::DirectoryRemovalFailed {
-                path: path.display().to_string(),
-                source,
+            fs::remove_dir_all(path).await.map_err(|source| {
+                CleanError::DirectoryRemovalFailed {
+                    path: path.display().to_string(),
+                    source,
+                }
             })?;
         }
         Ok(())
@@ -149,7 +153,7 @@ impl Cmd {
             ".pytest_cache",
             "htmlcov",
             ".mypy_cache",
-            "venv", // Common virtual environment name
+            "venv",  // Common virtual environment name
             ".venv", // Common virtual environment name
         ];
 
@@ -157,7 +161,9 @@ impl Cmd {
             // For glob patterns like "*.egg-info", we need to list and remove
             if sub_dir_name.contains('*') {
                 let pattern = dir.join(sub_dir_name).to_string_lossy().into_owned();
-                for entry in glob::glob(&pattern).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))? {
+                for entry in glob::glob(&pattern)
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?
+                {
                     if let Ok(path) = entry {
                         if path.is_dir() {
                             self.remove_dir_if_exists(&path).await?;
@@ -198,6 +204,8 @@ mod tests {
         // Depending on the test environment, the number of available commands may vary.
         // We expect at least 'cargo' to be present.
         assert!(!cmd_list.is_empty());
-        assert!(cmd_list.iter().any(|cmd| cmd.command_type == CommandType::Cargo));
+        assert!(cmd_list
+            .iter()
+            .any(|cmd| cmd.command_type == CommandType::Cargo));
     }
 }
